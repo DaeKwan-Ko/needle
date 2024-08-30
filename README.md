@@ -1,5 +1,5 @@
 # needle
-Scripts described in Ko and Brandizzi (under review)
+Scripts used in a paper authored by Ko and Brandizzi (under review) are presented.
 
 #The scripts provided in this repository allow analyzing raw data for RNA-seq analyses, coexpression network analyses, and gene regulatory network analyses:
 
