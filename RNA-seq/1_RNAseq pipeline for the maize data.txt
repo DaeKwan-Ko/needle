@@ -25,3 +25,43 @@ gzip ${INPUT}.fastq
 ### fastqc on cleaned files
 fastqc -o ${OUTPUT} -f fastq ${INPUT}
 
+### bowtie2 index for the maize genome
+bowtie2-build -f B73_v4.chr.fa B73_v4.chr
+
+### mapping to the genome
+tophat2 -o /${OUTPUT} \
+-I 30000 \
+-i 10 \
+-G /mnt/home/dkko/genomes/maize_v4/Zea_mays.B73_RefGen_v4.59.chr.gff3 \
+--library-type fr-unstranded \
+/mnt/home/dkko/genomes/maize_v4/B73_v4.chr \
+${INPUT}_R1_cutadapt.fastq.gz \
+${INPUT}_R2_cutadapt.fastq.gz
+
+### sort accepted_hits.bam
+samtools sort -o ${OUTPUT} ${INPUT}
+
+### index accepted_hits.bam
+samtools index ${INPUT}
+
+### calculate fpkm with cufflinks
+cufflinks -G /mnt/home/dkko/genomes/maize_v4/Zea_mays.B73_RefGen_v4.59.chr.gff3 \
+-b /mnt/home/dkko/genomes/maize_v4/B73_v4.chr.fa \
+--library-type fr-unstranded \
+-q \
+-I 30000 \
+-o /mnt/home/dkko/project_maize/RNAseq_TPC/5_cutfflinks/${myfile}_cutfflinks \
+/mnt/home/dkko/project_maize/RNAseq_TPC/4_tophat2_bowtie2/${myfile}/accepted_hits.bam
+
+## read count with htseq-count
+htseq-count --format=bam \
+--idattr=ID \
+--order=pos \
+--stranded=no \
+--minaqual=10 \
+--mode=union \
+--type=gene \
+/mnt/home/dkko/project_maize/RNAseq_TPC/4_tophat2_bowtie2/${myfile}/${myfile}.accepted_hits.sorted.bam \
+/mnt/home/dkko/genomes/maize_v4/Zea_mays.B73_RefGen_v4.59.chr.gff3 > /mnt/home/dkko/project_maize/RNAseq_TPC/6_htseq_count/${myfile}.htseq.txt
+
+
