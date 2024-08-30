@@ -1,10 +1,3 @@
-#------------------------------------------------------------------------------------
-# Aim: preprocessing of 50-nt single-end stranded RNA-seq data for further analysis
-# Author: Dae Kwan ko (dkko@msu.edu)
-# Last modified: 12-12-2022
-# Usage: shown below
-#------------------------------------------------------------------------------------
-
 ### examples of fastq files
 INPUT="/mnt/home/dkko/project_1/1_raw_files/${LINE}.fastq.gz"
 OUTPUT="/mnt/home/dkko/project_1/3_cleaned_files/${LINE}_cutadapt.fastq"
