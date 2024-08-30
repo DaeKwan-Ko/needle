@@ -1,42 +1,55 @@
 #------------------------------------------------------------------------------------
-# Description: the RNA-seq data processing pipeline for the maize dataset
-# Data source:  SRA, PRJNA436356; GEO, GSE111250
-# Paper reference: 10.1105/tpc.18.00153
-# Author: Dae Kwan ko (dkko@msu.edu)
-# Last modified: 08-30-2024
+RNA-seq Data Processing Pipeline for Maize Dataset
+Data Source:
+SRA: PRJNA436356
+GEO: GSE111250
+Paper Reference: DOI: 10.1105/tpc.18.00153
+Author: Dae Kwan Ko (dkko@msu.edu)
+Last Modified: 2024-08-30
+Overview: This repository provides a detailed RNA-seq data processing pipeline for the maize dataset. The pipeline includes steps for merging sequencing files, quality control, adapter trimming, alignment, and quantification, leveraging a suite of bioinformatics tools.
 #------------------------------------------------------------------------------------
 
-### merge 2 technical replicates into a single file
+Step 1: merge sequencing files
+# Merge sequencing files from the same sample into a single file
 cat SRX3751703_1.fastq SRX3751727_1.fastq > 0h_1_R1.fastq
 
-### count lines of raw files
+Step 2: count reads of raw files
+# Count the number of lines in the raw FASTQ file
 wc -l ${myfile}.fastq > ${myfile}_total_lines.txt
 
-### compress raw files
+Step 3: compress raw files
+# Compress the raw FASTQ file
 gzip ${INPUT}.fastq
 
-### fastqc on raw files
+Step 4: quality control on raw files (FastQC)
+# Perform quality control on the raw FASTQ file
 fastqc -o ${OUTPUT} -f fastq ${INPUT}
 
-### cutadapt
+Step 5: adapter trimming (Cutadapt)
+# Trim adapters from the sequencing reads
 cutadapt -f fastq -q 20,20 -m 30 -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC -A AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT \
 -o ${myfile}_R1_cutadapt.fastq \
 -p ${myfile}_R2_cutadapt.fastq \
 ${myfile}_R1.fastq.gz ${myfile}_R2.fastq.gz
 
-### count lines of cleaned files
+Step 6: count reads of cleaned files
+# Count the number of lines in the cleaned FASTQ file
 wc -l ${myfile}.fastq > ${myfile}_total_lines.txt
 
-### compress cleaned files
+Step 7: compress cleaned files
+# Compress the cleaned FASTQ file
 gzip ${INPUT}.fastq
 
-### fastqc on cleaned files
+Step 8: quality control on cleaned files (FastQC)
+# Perform quality control on the cleaned FASTQ file
 fastqc -o ${OUTPUT} -f fastq ${INPUT}
 
-### bowtie2 index for the maize genome
+Step 9: genome indexing (Bowtie2)
+# Build a Bowtie2 index for the maize genome
 bowtie2-build -f B73_v4.chr.fa B73_v4.chr
 
-### mapping to the genome
+Step 10: Alignment to the genome (Tophat2 via Bowtie2)
+# Map the sequencing reads to the maize genome
 tophat2 -o /${OUTPUT} \
 -I 30000 \
 -i 10 \
@@ -46,13 +59,16 @@ tophat2 -o /${OUTPUT} \
 ${INPUT}_R1_cutadapt.fastq.gz \
 ${INPUT}_R2_cutadapt.fastq.gz
 
-### sort accepted_hits.bam
+Step 11: sort BAM files (Samtools)
+# Sort the BAM file
 samtools sort -o ${OUTPUT} ${INPUT}
 
-### index accepted_hits.bam
+Step 12: Index BAM files (Samtools)
+# Index the BAM file
 samtools index ${INPUT}
 
-### calculate fpkm with cufflinks
+Step 13: Transcript quantification (Cufflinks)
+# Calculate FPKM values with Cufflinks
 cufflinks -G /mnt/home/dkko/genomes/maize_v4/Zea_mays.B73_RefGen_v4.59.chr.gff3 \
 -b /mnt/home/dkko/genomes/maize_v4/B73_v4.chr.fa \
 --library-type fr-unstranded \
@@ -61,7 +77,8 @@ cufflinks -G /mnt/home/dkko/genomes/maize_v4/Zea_mays.B73_RefGen_v4.59.chr.gff3 
 -o /mnt/home/dkko/project_maize/RNAseq_TPC/5_cutfflinks/${myfile}_cutfflinks \
 /mnt/home/dkko/project_maize/RNAseq_TPC/4_tophat2_bowtie2/${myfile}/accepted_hits.bam
 
-## read count with htseq-count
+Step 14: read count (HTSeq-count)
+# Perform read counting with HTSeq-count
 htseq-count --format=bam \
 --idattr=ID \
 --order=pos \
