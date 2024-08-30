@@ -1,17 +1,27 @@
-### examples of fastq files
-INPUT="/mnt/home/dkko/project_1/1_raw_files/${LINE}.fastq.gz"
-OUTPUT="/mnt/home/dkko/project_1/3_cleaned_files/${LINE}_cutadapt.fastq"
+### merge 2 technical replicates into a single file
+cat SRX3751703_1.fastq SRX3751727_1.fastq > 0h_1_R1.fastq
 
-### m5sum check
-md5sum ${INPUT} > ${INPUT}_md5sum.txt
+### count lines of raw files
+wc -l ${myfile}.fastq > ${myfile}_total_lines.txt
 
-### fastqc of raw data
+### compress raw files
+gzip ${INPUT}.fastq
+
+### fastqc on raw files
 fastqc -o ${OUTPUT} -f fastq ${INPUT}
 
 ### cutadapt
-cutadapt -f fastq -q 20,20 -u 2 -m 30 -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC \
--g AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCT \
--o ${OUTPUT} ${INPUT}
+cutadapt -f fastq -q 20,20 -m 30 -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC -A AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT \
+-o ${myfile}_R1_cutadapt.fastq \
+-p ${myfile}_R2_cutadapt.fastq \
+${myfile}_R1.fastq.gz ${myfile}_R2.fastq.gz
 
-### fastqc of cleaned data
+### count lines of cleaned files
+wc -l ${myfile}.fastq > ${myfile}_total_lines.txt
+
+### compress cleaned files
+gzip ${INPUT}.fastq
+
+### fastqc on cleaned files
 fastqc -o ${OUTPUT} -f fastq ${INPUT}
+
