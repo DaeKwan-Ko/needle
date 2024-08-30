@@ -3,6 +3,7 @@ RNA-seq Data Processing Pipeline for Maize Dataset
 Data Source:
 SRA: PRJNA436356
 GEO: GSE111250
+Data format: paired-end 150 nt
 Paper Reference: DOI: 10.1105/tpc.18.00153
 Author: Dae Kwan Ko (dkko@msu.edu)
 Last Modified: 2024-08-30
@@ -15,7 +16,7 @@ cat file1.fastq file2.fastq > merged.fastq
 
 Step 2: count reads of raw files
 # Count the number of lines in the raw FASTQ file
-wc -l ${myfile}.fastq > ${myfile}_total_lines.txt
+wc -l ${INPUT} > ${OUTPUT}
 
 Step 3: compress raw files
 # Compress the raw FASTQ file
@@ -27,14 +28,14 @@ fastqc -o ${OUTPUT} -f fastq ${INPUT}
 
 Step 5: adapter trimming (Cutadapt)
 # Trim adapters from the sequencing reads
-cutadapt -f fastq -q 20,20 -m 30 -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC -A AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT \
+cutadapt -f fastq -q 20,20 -u2 -m 30 -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC -A AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT \
 -o ${myfile}_R1_cutadapt.fastq \
 -p ${myfile}_R2_cutadapt.fastq \
 ${myfile}_R1.fastq.gz ${myfile}_R2.fastq.gz
 
 Step 6: count reads of cleaned files
 # Count the number of lines in the cleaned FASTQ file
-wc -l ${myfile}.fastq > ${myfile}_total_lines.txt
+wc -l ${INPUT} > ${OUTPUT}
 
 Step 7: compress cleaned files
 # Compress the cleaned FASTQ file
