@@ -1,0 +1,86 @@
+#------------------------------------------------------------------------------------
+RNA-seq Data Processing Pipeline for Sorghum Dataset
+Data source: JGI Genome Portal - https://genome.jgi.doe.gov/portal/SorbicEProfiling_14/SorbicEProfiling_14.info.html
+Data format: paired-end 150 nt
+Paper reference: n/a
+Author: Dae Kwan Ko (dkko@msu.edu)
+Last modified: 2024-08-30
+Overview: This repository provides a detailed RNA-seq data processing pipeline for the sorghum dataset. The pipeline includes steps for merging sequencing files, quality control, adapter trimming, alignment, and quantification, leveraging a suite of bioinformatics tools.
+#------------------------------------------------------------------------------------
+
+Step 1: split reads into R1 and R2
+# R1 and R2 reads need to be separated from the original files
+## R1
+sed -ne '1~8p;2~8p;3~8p;4~8p' ${INPUT} > ${OUTPUT}
+## R2
+sed -ne '5~8p;6~8p;7~8p;8~8p' ${INPUT} > ${OUTPUT}
+
+Step 2: count reads of raw files
+# Count the number of lines in the raw FASTQ file
+wc -l ${INPUT} > ${OUTPUT}
+
+Step 3: compress raw files
+# Compress the raw FASTQ file
+gzip ${INPUT}.fastq
+
+Step 4: quality control on raw files (FastQC)
+# Perform quality control on the raw FASTQ file
+fastqc -o ${OUTPUT} -f fastq ${INPUT}
+
+Step 5: adapter trimming (Cutadapt)
+# Trim adapters from the sequencing reads
+cutadapt -f fastq -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC -A AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT -q 20 -m 30 \
+-o ${OUTPUT1} -p ${OUTPUT2} ${INPUT1} ${INPUT2}
+
+Step 6: count reads of cleaned files
+# Count the number of lines in the cleaned FASTQ file
+wc -l ${INPUT} > ${OUTPUT}
+
+Step 7: compress cleaned files
+# Compress the cleaned FASTQ file
+gzip ${INPUT}.fastq
+
+Step 8: quality control on cleaned files (FastQC)
+# Perform quality control on the cleaned FASTQ file
+fastqc -o ${OUTPUT} -f fastq ${INPUT}
+
+Step 9: genome indexing (Bowtie2)
+# Build a Bowtie2 index for the maize genome
+bowtie2-build -f Sbicolor_454_v3.0.1.fa Sbicolor_454_v3.0.1
+
+Step 10: Alignment to the genome (Tophat2 via Bowtie2)
+# Map the sequencing reads to the maize genome
+tophat2 -o ${OUTPUT} -I 30000 -i 10 -p 5 \
+-G /mnt/home/dkko/genomes/sorghum_v3.1.1/Sbicolor_454_v3.1.1.gene.gff3 \
+--library-type fr-firststrand \
+/mnt/home/dkko/genomes/sorghum_v3.1.1/Sbicolor_454_v3.0.1 \
+${INPUT1} ${INPUT2}
+
+Step 11: sort BAM files (Samtools)
+# Sort the BAM file
+samtools sort -o ${OUTPUT} ${INPUT}
+
+Step 12: Index BAM files (Samtools)
+# Index the BAM file
+samtools index ${INPUT}
+
+Step 13: Transcript quantification (Cufflinks)
+# Calculate FPKM values with Cufflinks
+cufflinks -G ${GFF} \
+-b ${FASTA} \
+--library-type fr-firststrand \
+-q \
+-I 30000 \
+-o ${OUTPUT} \
+${INPUT}
+
+Step 14: read count (HTSeq-count)
+# Perform read counting with HTSeq-count
+htseq-count --format=bam \
+--idattr=ID \
+--order=pos \
+--stranded=reverse \
+--minaqual=10 \
+--mode=union \
+--type=gene \
+${INPUT} ${GFF} > ${OUTPUT}
