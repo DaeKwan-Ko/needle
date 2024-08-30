@@ -1,3 +1,12 @@
+#------------------------------------------------------------------------------------
+# Description: the RNA-seq data processing pipeline for the maize dataset
+# Data source:  SRA, PRJNA436356; GEO, GSE111250
+# Paper reference: 10.1105/tpc.18.00153
+# Author: Dae Kwan ko (dkko@msu.edu)
+# Last modified: 08-30-2024
+# Usage: shown below
+#------------------------------------------------------------------------------------
+
 ### merge 2 technical replicates into a single file
 cat SRX3751703_1.fastq SRX3751727_1.fastq > 0h_1_R1.fastq
 
