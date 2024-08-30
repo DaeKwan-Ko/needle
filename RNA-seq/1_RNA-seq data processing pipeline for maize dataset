@@ -11,7 +11,7 @@ Overview: This repository provides a detailed RNA-seq data processing pipeline f
 
 Step 1: merge sequencing files
 # Merge sequencing files from the same sample into a single file
-cat SRX3751703_1.fastq SRX3751727_1.fastq > 0h_1_R1.fastq
+cat file1.fastq file2.fastq > merged.fastq
 
 Step 2: count reads of raw files
 # Count the number of lines in the raw FASTQ file
