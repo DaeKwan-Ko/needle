@@ -1,5 +1,5 @@
 #------------------------------------------------------------------------------------
-Differential gene expression analysis of the brachypodium dataset using DESeq2
+Gene regulatory network construction of darkorange2.c and saddlebrown.c modules using GENIE3
 Data source: JGI Genome Portal - https://genome.jgi.doe.gov/portal/SorbicEProfiling_14/SorbicEProfiling_14.info.html
 Data format: paired-end 150 nt
 Paper reference: n/a
