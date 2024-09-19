@@ -1,9 +1,17 @@
 #------------------------------------------------------------------------------------
 Gene regulatory network construction of darkorange2.c and saddlebrown.c modules using GENIE3
-Data source: JGI Genome Portal - https://genome.jgi.doe.gov/portal/SorbicEProfiling_14/SorbicEProfiling_14.info.html
-Data format: paired-end 150 nt
-Paper reference: n/a
-Input data: raw read count files generated using htseq-count
+
+Data source of the Brachypodium data: 
+JGI Genome Portal - https://genome.jgi.doe.gov/portal/SorbicEProfiling_14/SorbicEProfiling_14.info.html
+Data format of the Brachypodium data: paired-end 150 nt
+Paper reference of the Brachypodium data: n/a
+
+Data Source of the sorghum data:
+SRA of the sorghum data: PRJNA436356
+GEO of the sorghum data: GSE111250
+Paper Reference: DOI: 10.1105/tpc.18.00153
+
+Input data: read count files generated using htseq-count 
 Author: Dae Kwan Ko (dkko@msu.edu)
 Last modified: 2024-08-30
 Overview: This repository presents the scripts used for constructing the gene regulatory network using GENIE3.
