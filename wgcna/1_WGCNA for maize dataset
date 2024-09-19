@@ -1,1 +1,12 @@
-
+#------------------------------------------------------------------------------------
+Gene regulatory network construction of brown module in the maize dataset using GENIE3
+Data Source:
+SRA: PRJNA436356
+GEO: GSE111250
+Data format: paired-end 150 nt
+Paper Reference: DOI: 10.1105/tpc.18.00153
+Input data: gene expression profiles (log2fc(stress/control))
+Author: Dae Kwan Ko (dkko@msu.edu)
+Last Modified: 2024-09-19
+Overview: This repository presents the scripts used for constructing the gene regulatory network using GENIE3.
+#------------------------------------------------------------------------------------
