@@ -12,3 +12,63 @@ Last Modified: 2024-09-19
 Overview: This repository presents the scripts used for the differential gene expression analysis using DESeq2.
 #------------------------------------------------------------------------------------
 
+```{r setup, include=FALSE, echo=FALSE}
+require("knitr")
+opts_knit$set(root.dir = "/Users/dkko/xxxx/")
+rm(list=ls())
+```
+
+```{r loadLibs}
+library(GENIE3)
+```
+
+
+```{r input.file.prep1}
+blue <- read.table("genie3 input_blue.txt", header=TRUE, sep ="\t")
+head(blue)
+
+rnames_blue <- blue[,1]
+rnames_blue
+```
+
+
+```{r input.file.prep2}
+dm_blue <- data.matrix(blue[,2:ncol(blue)])
+rownames(dm_blue) <- rnames_blue
+head(dm_blue)
+
+exprMatr_blue <- data.matrix(dm_blue)
+head(exprMatr_blue)
+
+colnames(exprMatr_blue) <- paste("Sample", 1:9, sep = "")
+head(exprMatr_blue)
+
+tf_blue <-read.table("TFs_included_blue.txt", header=TRUE, sep ="\t")
+head(tf_blue)
+
+regulators_blue <- c(tf_blue$tracking_id)
+head(regulators_blue)
+```
+
+
+```{r weight.matrix}
+# weigh matrix (wm) 
+set.seed(123) # For reproducibility of results
+wm_blue <- GENIE3(exprMatr_blue, regulators = regulators_blue, K = "sqrt")
+
+# test with different numbers (top link and threshold)
+top_links <- 200
+
+toplinkList_blue <- getLinkList(wm_blue, reportMax = top_links)
+
+thresholdlinkList_blue <- getLinkList(wm_blue, threshold = 0.15)
+
+dim(toplinkList_blue)
+head(toplinkList_blue)
+
+# save data to import to Cytoscape.
+write.table(toplinkList_blue, file = "top100_blue.txt", quote = F, sep = "\t", row.names = F)
+write.table(thresholdlinkList_blue, file = "threshold.0.10_blue.txt", quote = F, sep = "\t", row.names = F)
+```
+
+
