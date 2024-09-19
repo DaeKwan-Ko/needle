@@ -1,15 +1,66 @@
 #------------------------------------------------------------------------------------
-Differential gene expression analysis of Maize Dataset using DESeq2
+Gene regulatory network construction of brown module in the maize dataset using GENIE3
 Data Source:
 SRA: PRJNA436356
 GEO: GSE111250
 Data format: paired-end 150 nt
 Paper Reference: DOI: 10.1105/tpc.18.00153
-Input data: raw read count files generated using htseq-count
+Input data: gene expression profiles (log2fc(stress/control))
 Author: Dae Kwan Ko (dkko@msu.edu)
 Last Modified: 2024-09-19
-Overview: This repository presents the scripts used for the differential gene expression analysis using DESeq2.
+Overview: This repository presents the scripts used for constructing the gene regulatory network using GENIE3.
 #------------------------------------------------------------------------------------
 
 
+```{r setup, include=FALSE, echo=FALSE}
+require("knitr")
+opts_knit$set(root.dir = "/Users/dkko/xxxx/")
+rm(list=ls()) # Remove everything from the R environment. Important if you have some variables saved already
+```
 
+Load the required libraries.
+```{r loadLibs}
+library(GENIE3)
+```
+
+```{r input.file.prep1}
+brown <- read.table("genie3 input_brown.txt", header=TRUE, sep ="\t")
+head(brown)
+
+rnames_brown <- brown[,1]
+rnames_brown
+```
+
+```{r input.file.prep2}
+dm_brown <- data.matrix(brown[,2:ncol(brown)])
+rownames(dm_brown) <- rnames_brown
+head(dm_brown)
+exprMatr_brown <- data.matrix(dm_brown)
+head(exprMatr_brown)
+colnames(exprMatr_brown) <- paste("Sample", 1:6, sep = "")
+head(exprMatr_brown)
+tf_brown <-read.table("TFs_included_brown.txt", header=TRUE, sep ="\t")
+head(tf_brown)
+regulators_brown <- c(tf_brown$tracking_id)
+head(regulators_brown)
+```
+
+```{r weight.matrix}
+# weigh matrix (wm) 
+set.seed(123) # For reproducibility of results
+wm_brown <- GENIE3(exprMatr_brown, regulators = regulators_brown, K = "sqrt")
+
+top_links <- 200
+
+toplinkList_brown <- getLinkList(wm_brown, reportMax = top_links)
+
+
+threshokdlinkList_brown <- getLinkList(wm_brown, threshold = 0.15)
+
+dim(toplinkList_brown)
+head(toplinkList_brown)
+
+# save data to import to Cytoscape.
+write.table(toplinkList_brown, file = "top200_brown.txt", quote = F, sep = "\t", row.names = F)
+write.table(threshokdlinkList_brown, file = "threshold.0.15_brown.txt", quote = F, sep = "\t", row.names = F)
+```
