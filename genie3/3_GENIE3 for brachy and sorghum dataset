@@ -1,0 +1,82 @@
+#------------------------------------------------------------------------------------
+Differential gene expression analysis of the brachypodium dataset using DESeq2
+Data source: JGI Genome Portal - https://genome.jgi.doe.gov/portal/SorbicEProfiling_14/SorbicEProfiling_14.info.html
+Data format: paired-end 150 nt
+Paper reference: n/a
+Input data: raw read count files generated using htseq-count
+Author: Dae Kwan Ko (dkko@msu.edu)
+Last modified: 2024-08-30
+Overview: This repository presents the scripts used for the differential gene expression analysis using DESeq2.
+#------------------------------------------------------------------------------------
+
+```{r setup, include=FALSE, echo=FALSE}
+require("knitr")
+opts_knit$set(root.dir = "/Users/daekwanko/xxxx/")
+rm(list=ls())
+```
+
+
+```{r loadLibs}
+library(GENIE3)
+```
+
+```{r input.file.prep1}
+darkorange2_c <- read.table("darkorange2.c_brachy_log2fpkm1.txt", header=TRUE, sep ="\t")
+saddlebrown_c <- read.table("saddlebrown.c_sorghum_log2fpkm1.txt", header=TRUE, sep ="\t")
+
+head(darkorange2_c)
+
+rnames_darkorange2_c <- darkorange2_c[,1]
+rnames_saddlebrown_c <- saddlebrown_c[,1]
+
+rnames_darkorange2_c
+rnames_saddlebrown_c
+```
+
+```{r input.file.prep2}
+dm_darkorange2_c <- data.matrix(darkorange2_c[,2:ncol(darkorange2_c)])
+dm_saddlebrown_c <- data.matrix(saddlebrown_c[,2:ncol(saddlebrown_c)])
+
+rownames(dm_darkorange2_c) <- rnames_darkorange2_c
+rownames(dm_saddlebrown_c) <- rnames_saddlebrown_c
+
+head(dm_darkorange2_c)
+
+exprMatr_darkorange2_c <- data.matrix(dm_darkorange2_c)
+exprMatr_saddlebrown_c <- data.matrix(dm_saddlebrown_c)
+
+
+head(exprMatr_darkorange2_c)
+
+colnames(exprMatr_darkorange2_c) <- paste("Sample", 1:11, sep = "")
+colnames(exprMatr_saddlebrown_c) <- paste("Sample", 1:11, sep = "")
+
+head(exprMatr_darkorange2_c)
+
+tf_darkorange2_c <-read.table("TFs_included_darkorange2-c.txt", header=TRUE, sep ="\t")
+tf_saddlebrown_c <-read.table("TFs_included_saddlebrown-c.txt", header=TRUE, sep ="\t")
+
+head(tf_darkorange2_c)
+
+regulators_darkorange2_c <- c(tf_darkorange2_c$tracking_id)
+regulators_saddlebrown_c <- c(tf_saddlebrown_c$tracking_id)
+
+head(regulators_darkorange2_c)
+```
+
+
+```{r weight.matrix}
+# weigh matrix (wm) 
+set.seed(123) # For reproducibility of results
+wm_darkorange2_c <- GENIE3(exprMatr_darkorange2_c, regulators = regulators_darkorange2_c, K = "sqrt")
+wm_saddlebrown_c <- GENIE3(exprMatr_saddlebrown_c, regulators = regulators_saddlebrown_c, K = "sqrt")
+
+toplinkList_darkorange2_c <- getLinkList(wm_darkorange2_c, threshold = 0.15)
+toplinkList_saddlebrown_c <- getLinkList(wm_saddlebrown_c, threshold = 0.15)
+
+dim(toplinkList_darkorange2_c)
+head(toplinkList_darkorange2_c)
+
+write.table(toplinkList_darkorange2_c, file = "threshold.0.15_darkorange2_c.txt", quote = F, sep = "\t", row.names = F)
+write.table(toplinkList_saddlebrown_c, file = "threshold.0.15_saddlebrown_c.txt", quote = F, sep = "\t", row.names = F)
+```
