@@ -8,3 +8,723 @@ Author: Dae Kwan Ko (dkko@msu.edu)
 Last modified: 2024-08-30
 Overview: This repository presents the scripts used for the differential gene expression analysis using DESeq2.
 #------------------------------------------------------------------------------------
+
+## R Markdown
+
+```{r setup, include=FALSE, echo=FALSE}
+require("knitr")
+opts_knit$set(root.dir = "/Users/dkko/xxxx/")
+rm(list=ls())
+```
+
+```{r loadLibs}
+rm(list=ls())
+require(limma)
+require(edgeR)
+require(DESeq2)
+require(RColorBrewer)
+require(gplots)
+require(ggplot2)
+require(apeglm)
+require(FactoMineR)
+require(factoextra)
+require(digest)
+require(dplyr)
+```
+
+```{r fileprep}
+rm(list=ls())
+myFiles <- list.files(pattern = glob2rx("*htseq.txt"), 
+                      all.files = T, 
+                      full.names = F)
+myFiles
+myData <- lapply(myFiles,
+                 read.table, colClasses=c("character", "numeric"))
+myData
+# Name the elements of myData
+names(myData) <-c("A1","A2","A3","B1","B2","B3","C1","C2","C3","D1","D2","D3","E1","E2","E3",
+                  "F1","F2","F3","G1","G2","G3","H1","H2","H3","I1","I2","I3","J1","J2","J3","K1","K2","K3")
+
+summary(myData)
+head(myData$A1)
+tail(myData$A1)
+rmLines <- function(x){x <- x[1:32439,]}
+myData <- lapply(myData, rmLines)
+nrow(myData$A1)
+counts <- data.frame(row.names=myData$A1[,1],A1=myData$A1[,2],A2=myData$A2[,2],A3=myData$A3[,2],B1=myData$B1[,2],B2=myData$B2[,2],B3=myData$B3[,2],
+                     C1=myData$C1[,2],C2=myData$C2[,2],C3=myData$C3[,2],D1=myData$D1[,2],D2=myData$D2[,2],D3=myData$D3[,2],
+                     E1=myData$E1[,2],E2=myData$E2[,2],E3=myData$E3[,2],F1=myData$F1[,2],F2=myData$F2[,2],F3=myData$F3[,2],
+                     G1=myData$G1[,2],G2=myData$G2[,2],G3=myData$G3[,2],H1=myData$H1[,2],H2=myData$H2[,2],H3=myData$H3[,2],
+                     I1=myData$I1[,2],I2=myData$I2[,2],I3=myData$I3[,2],J1=myData$J1[,2],J2=myData$J2[,2],J3=myData$J3[,2],
+                     K1=myData$K1[,2],K2=myData$K2[,2],K3=myData$K3[,2])
+head(counts)
+```
+
+```{r fileprep2}
+counts_A_B <- counts[,c("A1", "A2", "A3", "B1", "B2", "B3")]
+counts_A_C <- counts[,c("A1", "A2", "A3", "C1", "C2", "C3")]
+counts_A_D <- counts[,c("A1", "A2", "A3", "D1", "D2", "D3")]
+counts_A_E <- counts[,c("A1", "A2", "A3", "E1", "E2", "E3")]
+counts_A_F <- counts[,c("A1", "A2", "A3", "F1", "F2", "F3")]
+counts_A_G <- counts[,c("A1", "A2", "A3", "G1", "G2", "G3")]
+counts_A_H <- counts[,c("A1", "A2", "A3", "H1", "H2", "H3")]
+counts_A_I <- counts[,c("A1", "A2", "A3", "I1", "I2", "I3")]
+counts_A_J <- counts[,c("A1", "A2", "A3", "J1", "J2", "J3")]
+counts_A_K <- counts[,c("A1", "A2", "A3", "K1", "K2", "K3")]
+counts_B_C <- counts[,c("B1", "B2", "B3", "C1", "C2", "C3")]
+counts_B_D <- counts[,c("B1", "B2", "B3", "D1", "D2", "D3")]
+counts_B_E <- counts[,c("B1", "B2", "B3", "E1", "E2", "E3")]
+counts_B_F <- counts[,c("B1", "B2", "B3", "F1", "F2", "F3")]
+counts_B_G <- counts[,c("B1", "B2", "B3", "G1", "G2", "G3")]
+counts_B_H <- counts[,c("B1", "B2", "B3", "H1", "H2", "H3")]
+counts_B_I <- counts[,c("B1", "B2", "B3", "I1", "I2", "I3")]
+counts_B_J <- counts[,c("B1", "B2", "B3", "J1", "J2", "J3")]
+counts_B_K <- counts[,c("B1", "B2", "B3", "K1", "K2", "K3")]
+counts_C_D <- counts[,c("C1", "C2", "C3", "D1", "D2", "D3")]
+counts_C_E <- counts[,c("C1", "C2", "C3", "E1", "E2", "E3")]
+counts_C_F <- counts[,c("C1", "C2", "C3", "F1", "F2", "F3")]
+counts_C_G <- counts[,c("C1", "C2", "C3", "G1", "G2", "G3")]
+counts_C_H <- counts[,c("C1", "C2", "C3", "H1", "H2", "H3")]
+counts_C_I <- counts[,c("C1", "C2", "C3", "I1", "I2", "I3")]
+counts_C_J <- counts[,c("C1", "C2", "C3", "J1", "J2", "J3")]
+counts_C_K <- counts[,c("C1", "C2", "C3", "K1", "K2", "K3")]
+counts_D_E <- counts[,c("D1", "D2", "D3", "E1", "E2", "E3")]
+counts_D_F <- counts[,c("D1", "D2", "D3", "F1", "F2", "F3")]
+counts_D_G <- counts[,c("D1", "D2", "D3", "G1", "G2", "G3")]
+counts_D_H <- counts[,c("D1", "D2", "D3", "H1", "H2", "H3")]
+counts_D_I <- counts[,c("D1", "D2", "D3", "I1", "I2", "I3")]
+counts_D_J <- counts[,c("D1", "D2", "D3", "J1", "J2", "J3")]
+counts_D_K <- counts[,c("D1", "D2", "D3", "K1", "K2", "K3")]
+counts_E_F <- counts[,c("E1", "E2", "E3", "F1", "F2", "F3")]
+counts_E_G <- counts[,c("E1", "E2", "E3", "G1", "G2", "G3")]
+counts_E_H <- counts[,c("E1", "E2", "E3", "H1", "H2", "H3")]
+counts_E_I <- counts[,c("E1", "E2", "E3", "I1", "I2", "I3")]
+counts_E_J <- counts[,c("E1", "E2", "E3", "J1", "J2", "J3")]
+counts_E_K <- counts[,c("E1", "E2", "E3", "K1", "K2", "K3")]
+counts_F_G <- counts[,c("F1", "F2", "F3", "G1", "G2", "G3")]
+counts_F_H <- counts[,c("F1", "F2", "F3", "H1", "H2", "H3")]
+counts_F_I <- counts[,c("F1", "F2", "F3", "I1", "I2", "I3")]
+counts_F_J <- counts[,c("F1", "F2", "F3", "J1", "J2", "J3")]
+counts_F_K <- counts[,c("F1", "F2", "F3", "K1", "K2", "K3")]
+counts_G_H <- counts[,c("G1", "G2", "G3", "H1", "H2", "H3")]
+counts_G_I <- counts[,c("G1", "G2", "G3", "I1", "I2", "I3")]
+counts_G_J <- counts[,c("G1", "G2", "G3", "J1", "J2", "J3")]
+counts_G_K <- counts[,c("G1", "G2", "G3", "K1", "K2", "K3")]
+counts_H_I <- counts[,c("H1", "H2", "H3", "I1", "I2", "I3")]
+counts_H_J <- counts[,c("H1", "H2", "H3", "J1", "J2", "J3")]
+counts_H_K <- counts[,c("H1", "H2", "H3", "K1", "K2", "K3")]
+counts_I_J <- counts[,c("I1", "I2", "I3", "J1", "J2", "J3")]
+counts_I_K <- counts[,c("I1", "I2", "I3", "K1", "K2", "K3")]
+counts_J_K <- counts[,c("J1", "J2", "J3", "K1", "K2", "K3")]
+
+geneTotals_A_B <- rowSums(counts_A_B) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_A_C <- rowSums(counts_A_C) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_A_D <- rowSums(counts_A_D) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_A_E <- rowSums(counts_A_E) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_A_F <- rowSums(counts_A_F) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_A_G <- rowSums(counts_A_G) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_A_H <- rowSums(counts_A_H) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_A_I <- rowSums(counts_A_I) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_A_J <- rowSums(counts_A_J) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_A_K <- rowSums(counts_A_K) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_B_C <- rowSums(counts_B_C) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_B_D <- rowSums(counts_B_D) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_B_E <- rowSums(counts_B_E) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_B_F <- rowSums(counts_B_F) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_B_G <- rowSums(counts_B_G) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_B_H <- rowSums(counts_B_H) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_B_I <- rowSums(counts_B_I) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_B_J <- rowSums(counts_B_J) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_B_K <- rowSums(counts_B_K) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_C_D <- rowSums(counts_C_D) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_C_E <- rowSums(counts_C_E) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_C_F <- rowSums(counts_C_F) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_C_G <- rowSums(counts_C_G) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_C_H <- rowSums(counts_C_H) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_C_I <- rowSums(counts_C_I) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_C_J <- rowSums(counts_C_J) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_C_K <- rowSums(counts_C_K) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_D_E <- rowSums(counts_D_E) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_D_F <- rowSums(counts_D_F) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_D_G <- rowSums(counts_D_G) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_D_H <- rowSums(counts_D_H) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_D_I <- rowSums(counts_D_I) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_D_J <- rowSums(counts_D_J) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_D_K <- rowSums(counts_D_K) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_E_F <- rowSums(counts_E_F) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_E_G <- rowSums(counts_E_G) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_E_H <- rowSums(counts_E_H) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_E_I <- rowSums(counts_E_I) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_E_J <- rowSums(counts_E_J) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_E_K <- rowSums(counts_E_K) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_F_G <- rowSums(counts_F_G) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_F_H <- rowSums(counts_F_H) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_F_I <- rowSums(counts_F_I) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_F_J <- rowSums(counts_F_J) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_F_K <- rowSums(counts_F_K) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_G_H <- rowSums(counts_G_H) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_G_I <- rowSums(counts_G_I) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_G_J <- rowSums(counts_G_J) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_G_K <- rowSums(counts_G_K) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_H_I <- rowSums(counts_H_I) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_H_J <- rowSums(counts_H_J) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_H_K <- rowSums(counts_H_K) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_I_J <- rowSums(counts_I_J) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_I_K <- rowSums(counts_I_K) # Evaluate the sum of each row and save to a new vector called geneTotals
+geneTotals_J_K <- rowSums(counts_J_K) # Evaluate the sum of each row and save to a new vector called geneTotals
+
+countsNonZero_A_B <- counts_A_B[geneTotals_A_B>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_A_C <- counts_A_C[geneTotals_A_C>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_A_D <- counts_A_D[geneTotals_A_D>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_A_E <- counts_A_E[geneTotals_A_E>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_A_F <- counts_A_F[geneTotals_A_F>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_A_G <- counts_A_G[geneTotals_A_G>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_A_H <- counts_A_H[geneTotals_A_H>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_A_I <- counts_A_I[geneTotals_A_I>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_A_J <- counts_A_J[geneTotals_A_J>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_A_K <- counts_A_K[geneTotals_A_K>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_B_C <- counts_B_C[geneTotals_B_C>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_B_D <- counts_B_D[geneTotals_B_D>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_B_E <- counts_B_E[geneTotals_B_E>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_B_F <- counts_B_F[geneTotals_B_F>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_B_G <- counts_B_G[geneTotals_B_G>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_B_H <- counts_B_H[geneTotals_B_H>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_B_I <- counts_B_I[geneTotals_B_I>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_B_J <- counts_B_J[geneTotals_B_J>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_B_K <- counts_B_K[geneTotals_B_K>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_C_D <- counts_C_D[geneTotals_C_D>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_C_E <- counts_C_E[geneTotals_C_E>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_C_F <- counts_C_F[geneTotals_C_F>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_C_G <- counts_C_G[geneTotals_C_G>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_C_H <- counts_C_H[geneTotals_C_H>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_C_I <- counts_C_I[geneTotals_C_I>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_C_J <- counts_C_J[geneTotals_C_J>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_C_K <- counts_C_K[geneTotals_C_K>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_D_E <- counts_D_E[geneTotals_D_E>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_D_F <- counts_D_F[geneTotals_D_F>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_D_G <- counts_D_G[geneTotals_D_G>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_D_H <- counts_D_H[geneTotals_D_H>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_D_I <- counts_D_I[geneTotals_D_I>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_D_J <- counts_D_J[geneTotals_D_J>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_D_K <- counts_D_K[geneTotals_D_K>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_E_F <- counts_E_F[geneTotals_E_F>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_E_G <- counts_E_G[geneTotals_E_G>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_E_H <- counts_E_H[geneTotals_E_H>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_E_I <- counts_E_I[geneTotals_E_I>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_E_J <- counts_E_J[geneTotals_E_J>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_E_K <- counts_E_K[geneTotals_E_K>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_F_G <- counts_F_G[geneTotals_F_G>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_F_H <- counts_F_H[geneTotals_F_H>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_F_I <- counts_F_I[geneTotals_F_I>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_F_J <- counts_F_J[geneTotals_F_J>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_F_K <- counts_F_K[geneTotals_F_K>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_G_H <- counts_G_H[geneTotals_G_H>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_G_I <- counts_G_I[geneTotals_G_I>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_G_J <- counts_G_J[geneTotals_G_J>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_G_K <- counts_G_K[geneTotals_G_K>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_H_I <- counts_H_I[geneTotals_H_I>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_H_J <- counts_H_J[geneTotals_H_J>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_H_K <- counts_H_K[geneTotals_H_K>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_I_J <- counts_I_J[geneTotals_I_J>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_I_K <- counts_I_K[geneTotals_I_K>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+countsNonZero_J_K <- counts_J_K[geneTotals_J_K>50,] # Subset the rows where the gene Total is greater than 100 #to get the list of all genes
+```
+
+```{r fileprep2}
+nrow(countsNonZero_A_B) 
+nrow(countsNonZero_A_C) 
+nrow(countsNonZero_A_D) 
+nrow(countsNonZero_A_E) 
+nrow(countsNonZero_A_F)
+nrow(countsNonZero_A_G) 
+nrow(countsNonZero_A_H) 
+nrow(countsNonZero_A_I)
+nrow(countsNonZero_A_J)
+nrow(countsNonZero_A_K) 
+nrow(countsNonZero_B_C) 
+nrow(countsNonZero_B_D)
+nrow(countsNonZero_B_E) 
+nrow(countsNonZero_B_F)
+nrow(countsNonZero_B_G)
+nrow(countsNonZero_B_H)
+nrow(countsNonZero_B_I)
+nrow(countsNonZero_B_J) 
+nrow(countsNonZero_B_K)
+nrow(countsNonZero_C_D)
+nrow(countsNonZero_C_E) 
+nrow(countsNonZero_C_F) 
+nrow(countsNonZero_C_G)
+nrow(countsNonZero_C_H) 
+nrow(countsNonZero_C_I) 
+nrow(countsNonZero_C_J) 
+nrow(countsNonZero_C_K) 
+nrow(countsNonZero_D_E) 
+nrow(countsNonZero_D_F) 
+nrow(countsNonZero_D_G) 
+nrow(countsNonZero_D_H) 
+nrow(countsNonZero_D_I) 
+nrow(countsNonZero_D_J)
+nrow(countsNonZero_D_K) 
+nrow(countsNonZero_E_F) 
+nrow(countsNonZero_E_G) 
+nrow(countsNonZero_E_H) 
+nrow(countsNonZero_E_I) 
+nrow(countsNonZero_E_J) 
+nrow(countsNonZero_E_K) 
+nrow(countsNonZero_F_G) 
+nrow(countsNonZero_F_H) 
+nrow(countsNonZero_F_I) 
+nrow(countsNonZero_F_J) 
+nrow(countsNonZero_F_K)
+nrow(countsNonZero_G_H) 
+nrow(countsNonZero_G_I) 
+nrow(countsNonZero_G_J) 
+nrow(countsNonZero_G_K) 
+nrow(countsNonZero_H_I) 
+nrow(countsNonZero_H_J)
+nrow(countsNonZero_H_K)
+nrow(countsNonZero_I_J)
+nrow(countsNonZero_I_K)
+nrow(countsNonZero_J_K)
+
+treatments <- as.factor(c(rep("ctrl",3),rep("stress",3)))
+design <- model.matrix(~treatments)
+
+dge <- DGEList(counts=countsNonZero_A_B, 
+               group=treatments, 
+               remove.zeros=T) 
+plotMDS(dge,main="MDS",pch = 19,
+        col=c(rep("black",3),rep("red",3)))
+```
+
+
+```{r DEDeq.object}
+colData <- DataFrame(treatments)
+colData
+
+treatments
+
+dds_A_B <- DESeqDataSetFromMatrix(countsNonZero_A_B, colData=colData, design=formula(~treatments))
+dds_A_C <- DESeqDataSetFromMatrix(countsNonZero_A_C, colData=colData, design=formula(~treatments))
+dds_A_D <- DESeqDataSetFromMatrix(countsNonZero_A_D, colData=colData, design=formula(~treatments))
+dds_A_E <- DESeqDataSetFromMatrix(countsNonZero_A_E, colData=colData, design=formula(~treatments))
+dds_A_F <- DESeqDataSetFromMatrix(countsNonZero_A_F, colData=colData, design=formula(~treatments))
+dds_A_G <- DESeqDataSetFromMatrix(countsNonZero_A_G, colData=colData, design=formula(~treatments))
+dds_A_H <- DESeqDataSetFromMatrix(countsNonZero_A_H, colData=colData, design=formula(~treatments))
+dds_A_I <- DESeqDataSetFromMatrix(countsNonZero_A_I, colData=colData, design=formula(~treatments))
+dds_A_J <- DESeqDataSetFromMatrix(countsNonZero_A_J, colData=colData, design=formula(~treatments))
+dds_A_K <- DESeqDataSetFromMatrix(countsNonZero_A_K, colData=colData, design=formula(~treatments))
+dds_B_C <- DESeqDataSetFromMatrix(countsNonZero_B_C, colData=colData, design=formula(~treatments))
+dds_B_D <- DESeqDataSetFromMatrix(countsNonZero_B_D, colData=colData, design=formula(~treatments))
+dds_B_E <- DESeqDataSetFromMatrix(countsNonZero_B_E, colData=colData, design=formula(~treatments))
+dds_B_F <- DESeqDataSetFromMatrix(countsNonZero_B_F, colData=colData, design=formula(~treatments))
+dds_B_G <- DESeqDataSetFromMatrix(countsNonZero_B_G, colData=colData, design=formula(~treatments))
+dds_B_H <- DESeqDataSetFromMatrix(countsNonZero_B_H, colData=colData, design=formula(~treatments))
+dds_B_I <- DESeqDataSetFromMatrix(countsNonZero_B_I, colData=colData, design=formula(~treatments))
+dds_B_J <- DESeqDataSetFromMatrix(countsNonZero_B_J, colData=colData, design=formula(~treatments))
+dds_B_K <- DESeqDataSetFromMatrix(countsNonZero_B_K, colData=colData, design=formula(~treatments))
+dds_C_D <- DESeqDataSetFromMatrix(countsNonZero_C_D, colData=colData, design=formula(~treatments))
+dds_C_E <- DESeqDataSetFromMatrix(countsNonZero_C_E, colData=colData, design=formula(~treatments))
+dds_C_F <- DESeqDataSetFromMatrix(countsNonZero_C_F, colData=colData, design=formula(~treatments))
+dds_C_G <- DESeqDataSetFromMatrix(countsNonZero_C_G, colData=colData, design=formula(~treatments))
+dds_C_H <- DESeqDataSetFromMatrix(countsNonZero_C_H, colData=colData, design=formula(~treatments))
+dds_C_I <- DESeqDataSetFromMatrix(countsNonZero_C_I, colData=colData, design=formula(~treatments))
+dds_C_J <- DESeqDataSetFromMatrix(countsNonZero_C_J, colData=colData, design=formula(~treatments))
+dds_C_K <- DESeqDataSetFromMatrix(countsNonZero_C_K, colData=colData, design=formula(~treatments))
+dds_D_E <- DESeqDataSetFromMatrix(countsNonZero_D_E, colData=colData, design=formula(~treatments))
+dds_D_F <- DESeqDataSetFromMatrix(countsNonZero_D_F, colData=colData, design=formula(~treatments))
+dds_D_G <- DESeqDataSetFromMatrix(countsNonZero_D_G, colData=colData, design=formula(~treatments))
+dds_D_H <- DESeqDataSetFromMatrix(countsNonZero_D_H, colData=colData, design=formula(~treatments))
+dds_D_I <- DESeqDataSetFromMatrix(countsNonZero_D_I, colData=colData, design=formula(~treatments))
+dds_D_J <- DESeqDataSetFromMatrix(countsNonZero_D_J, colData=colData, design=formula(~treatments))
+dds_D_K <- DESeqDataSetFromMatrix(countsNonZero_D_K, colData=colData, design=formula(~treatments))
+dds_E_F <- DESeqDataSetFromMatrix(countsNonZero_E_F, colData=colData, design=formula(~treatments))
+dds_E_G <- DESeqDataSetFromMatrix(countsNonZero_E_G, colData=colData, design=formula(~treatments))
+dds_E_H <- DESeqDataSetFromMatrix(countsNonZero_E_H, colData=colData, design=formula(~treatments))
+dds_E_I <- DESeqDataSetFromMatrix(countsNonZero_E_I, colData=colData, design=formula(~treatments))
+dds_E_J <- DESeqDataSetFromMatrix(countsNonZero_E_J, colData=colData, design=formula(~treatments))
+dds_E_K <- DESeqDataSetFromMatrix(countsNonZero_E_K, colData=colData, design=formula(~treatments))
+dds_F_G <- DESeqDataSetFromMatrix(countsNonZero_F_G, colData=colData, design=formula(~treatments))
+dds_F_H <- DESeqDataSetFromMatrix(countsNonZero_F_H, colData=colData, design=formula(~treatments))
+dds_F_I <- DESeqDataSetFromMatrix(countsNonZero_F_I, colData=colData, design=formula(~treatments))
+dds_F_J <- DESeqDataSetFromMatrix(countsNonZero_F_J, colData=colData, design=formula(~treatments))
+dds_F_K <- DESeqDataSetFromMatrix(countsNonZero_F_K, colData=colData, design=formula(~treatments))
+dds_G_H <- DESeqDataSetFromMatrix(countsNonZero_G_H, colData=colData, design=formula(~treatments))
+dds_G_I <- DESeqDataSetFromMatrix(countsNonZero_G_I, colData=colData, design=formula(~treatments))
+dds_G_J <- DESeqDataSetFromMatrix(countsNonZero_G_J, colData=colData, design=formula(~treatments))
+dds_G_K <- DESeqDataSetFromMatrix(countsNonZero_G_K, colData=colData, design=formula(~treatments))
+dds_H_I <- DESeqDataSetFromMatrix(countsNonZero_H_I, colData=colData, design=formula(~treatments))
+dds_H_J <- DESeqDataSetFromMatrix(countsNonZero_H_J, colData=colData, design=formula(~treatments))
+dds_H_K <- DESeqDataSetFromMatrix(countsNonZero_H_K, colData=colData, design=formula(~treatments))
+dds_I_J <- DESeqDataSetFromMatrix(countsNonZero_I_J, colData=colData, design=formula(~treatments))
+dds_I_K <- DESeqDataSetFromMatrix(countsNonZero_I_K, colData=colData, design=formula(~treatments))
+dds_J_K <- DESeqDataSetFromMatrix(countsNonZero_J_K, colData=colData, design=formula(~treatments))
+
+dds_A_B
+dds_A_C
+dds_A_D
+dds_A_E
+dds_A_F
+dds_A_G
+dds_A_H
+dds_A_I
+dds_A_J
+dds_A_K
+dds_B_C
+dds_B_D
+dds_B_E
+dds_B_F
+dds_B_G
+dds_B_H
+dds_B_I
+dds_B_J
+dds_B_K
+dds_C_D
+dds_C_E
+dds_C_F
+dds_C_G
+dds_C_H
+dds_C_I
+dds_C_J
+dds_C_K
+dds_D_E
+dds_D_F
+dds_D_G
+dds_D_H
+dds_D_I
+dds_D_J
+dds_D_K
+dds_E_F
+dds_E_G
+dds_E_H
+dds_E_I
+dds_E_J
+dds_E_K
+dds_F_G
+dds_F_H
+dds_F_I
+dds_F_J
+dds_F_K
+dds_G_H
+dds_G_I
+dds_G_J
+dds_G_K
+dds_H_I
+dds_H_J
+dds_H_K
+dds_I_J
+dds_I_K
+dds_J_K
+```
+
+```{r estimation}
+dds_A_B <- DESeq(dds_A_B)
+dds_A_C <- DESeq(dds_A_C)
+dds_A_D <- DESeq(dds_A_D)
+dds_A_E <- DESeq(dds_A_E)
+dds_A_F <- DESeq(dds_A_F)
+dds_A_G <- DESeq(dds_A_G)
+dds_A_H <- DESeq(dds_A_H)
+dds_A_I <- DESeq(dds_A_I)
+dds_A_J <- DESeq(dds_A_J)
+dds_A_K <- DESeq(dds_A_K)
+dds_B_C <- DESeq(dds_B_C)
+dds_B_D <- DESeq(dds_B_D)
+dds_B_E <- DESeq(dds_B_E)
+dds_B_F <- DESeq(dds_B_F)
+dds_B_G <- DESeq(dds_B_G)
+dds_B_H <- DESeq(dds_B_H)
+dds_B_I <- DESeq(dds_B_I)
+dds_B_J <- DESeq(dds_B_J)
+dds_B_K <- DESeq(dds_B_K)
+dds_C_D <- DESeq(dds_C_D)
+dds_C_E <- DESeq(dds_C_E)
+dds_C_F <- DESeq(dds_C_F)
+dds_C_G <- DESeq(dds_C_G)
+dds_C_H <- DESeq(dds_C_H)
+dds_C_I <- DESeq(dds_C_I)
+dds_C_J <- DESeq(dds_C_J)
+dds_C_K <- DESeq(dds_C_K)
+dds_D_E <- DESeq(dds_D_E)
+dds_D_F <- DESeq(dds_D_F)
+dds_D_G <- DESeq(dds_D_G)
+dds_D_H <- DESeq(dds_D_H)
+dds_D_I <- DESeq(dds_D_I)
+dds_D_J <- DESeq(dds_D_J)
+dds_D_K <- DESeq(dds_D_K)
+dds_E_F <- DESeq(dds_E_F)
+dds_E_G <- DESeq(dds_E_G)
+dds_E_H <- DESeq(dds_E_H)
+dds_E_I <- DESeq(dds_E_I)
+dds_E_J <- DESeq(dds_E_J)
+dds_E_K <- DESeq(dds_E_K)
+dds_F_G <- DESeq(dds_F_G)
+dds_F_H <- DESeq(dds_F_H)
+dds_F_I <- DESeq(dds_F_I)
+dds_F_J <- DESeq(dds_F_J)
+dds_F_K <- DESeq(dds_F_K)
+dds_G_H <- DESeq(dds_G_H)
+dds_G_I <- DESeq(dds_G_I)
+dds_G_J <- DESeq(dds_G_J)
+dds_G_K <- DESeq(dds_G_K)
+dds_H_I <- DESeq(dds_H_I)
+dds_H_J <- DESeq(dds_H_J)
+dds_H_K <- DESeq(dds_H_K)
+dds_I_J <- DESeq(dds_I_J)
+dds_I_K <- DESeq(dds_I_K)
+dds_J_K <- DESeq(dds_J_K)
+```
+
+```{r plotting}
+slotNames(dds_A_B)
+
+dds_A_B@colData
+
+str(dds_A_B)
+
+geneDispersion_A_B <- dds_A_B@rowRanges@elementMetadata@listData$dispGeneEst
+treatments_A_B <- dds_A_B@rowRanges@elementMetadata@listData$treatments_stress_vs_ctrl
+
+plot(treatments_A_B,geneDispersion_A_B, xlab="Fold change of expression (A/b)", 
+     ylab="Gene dispersion estimate", pch=19, cex=0.4)
+plotDispEsts(dds_A_B)
+```
+
+
+```{r clustering}
+rdds <- rlog(dds_A_B)
+hmcol <- colorRampPalette(brewer.pal(9,"Greens"))(100)
+
+distsRL <- dist(t(assay(dds_A_B)))
+mat <- as.matrix(distsRL)
+rownames(mat)<- colnames(mat) <- with(colData(dds_A_B), treatments)
+heatmap.2(mat, trace="none", col=rev(hmcol), dendrogram="col", density.info="none", margins=c(10,10))
+```
+
+
+```{r clustering}
+dds_pv_A_B <- results(dds_A_B)
+dds_pv_A_C <- results(dds_A_C)
+dds_pv_A_D <- results(dds_A_D)
+dds_pv_A_E <- results(dds_A_E)
+dds_pv_A_F <- results(dds_A_F)
+dds_pv_A_G <- results(dds_A_G)
+dds_pv_A_H <- results(dds_A_H)
+dds_pv_A_I <- results(dds_A_I)
+dds_pv_A_J <- results(dds_A_J)
+dds_pv_A_K <- results(dds_A_K)
+dds_pv_B_C <- results(dds_B_C)
+dds_pv_B_D <- results(dds_B_D)
+dds_pv_B_E <- results(dds_B_E)
+dds_pv_B_F <- results(dds_B_F)
+dds_pv_B_G <- results(dds_B_G)
+dds_pv_B_H <- results(dds_B_H)
+dds_pv_B_I <- results(dds_B_I)
+dds_pv_B_J <- results(dds_B_J)
+dds_pv_B_K <- results(dds_B_K)
+dds_pv_C_D <- results(dds_C_D)
+dds_pv_C_E <- results(dds_C_E)
+dds_pv_C_F <- results(dds_C_F)
+dds_pv_C_G <- results(dds_C_G)
+dds_pv_C_H <- results(dds_C_H)
+dds_pv_C_I <- results(dds_C_I)
+dds_pv_C_J <- results(dds_C_J)
+dds_pv_C_K <- results(dds_C_K)
+dds_pv_D_E <- results(dds_D_E)
+dds_pv_D_F <- results(dds_D_F)
+dds_pv_D_G <- results(dds_D_G)
+dds_pv_D_H <- results(dds_D_H)
+dds_pv_D_I <- results(dds_D_I)
+dds_pv_D_J <- results(dds_D_J)
+dds_pv_D_K <- results(dds_D_K)
+dds_pv_E_F <- results(dds_E_F)
+dds_pv_E_G <- results(dds_E_G)
+dds_pv_E_H <- results(dds_E_H)
+dds_pv_E_I <- results(dds_E_I)
+dds_pv_E_J <- results(dds_E_J)
+dds_pv_E_K <- results(dds_E_K)
+dds_pv_F_G <- results(dds_F_G)
+dds_pv_F_H <- results(dds_F_H)
+dds_pv_F_I <- results(dds_F_I)
+dds_pv_F_J <- results(dds_F_J)
+dds_pv_F_K <- results(dds_F_K)
+dds_pv_G_H <- results(dds_G_H)
+dds_pv_G_I <- results(dds_G_I)
+dds_pv_G_J <- results(dds_G_J)
+dds_pv_G_K <- results(dds_G_K)
+dds_pv_H_I <- results(dds_H_I)
+dds_pv_H_J <- results(dds_H_J)
+dds_pv_H_K <- results(dds_H_K)
+dds_pv_I_J <- results(dds_I_J)
+dds_pv_I_K <- results(dds_I_K)
+dds_pv_J_K <- results(dds_J_K)
+
+dds_pv_A_B <- dds_pv_A_B[!(is.na(dds_pv_A_B$padj)),] 
+dds_pv_A_C <- dds_pv_A_C[!(is.na(dds_pv_A_C$padj)),] 
+dds_pv_A_D <- dds_pv_A_D[!(is.na(dds_pv_A_D$padj)),] 
+dds_pv_A_E <- dds_pv_A_E[!(is.na(dds_pv_A_E$padj)),] 
+dds_pv_A_F <- dds_pv_A_F[!(is.na(dds_pv_A_F$padj)),] 
+dds_pv_A_G <- dds_pv_A_G[!(is.na(dds_pv_A_G$padj)),] 
+dds_pv_A_H <- dds_pv_A_H[!(is.na(dds_pv_A_H$padj)),] 
+dds_pv_A_I <- dds_pv_A_I[!(is.na(dds_pv_A_I$padj)),] 
+dds_pv_A_J <- dds_pv_A_J[!(is.na(dds_pv_A_J$padj)),] 
+dds_pv_A_K <- dds_pv_A_K[!(is.na(dds_pv_A_K$padj)),] 
+dds_pv_B_C <- dds_pv_B_C[!(is.na(dds_pv_B_C$padj)),] 
+dds_pv_B_D <- dds_pv_B_D[!(is.na(dds_pv_B_D$padj)),] 
+dds_pv_B_E <- dds_pv_B_E[!(is.na(dds_pv_B_E$padj)),] 
+dds_pv_B_F <- dds_pv_B_F[!(is.na(dds_pv_B_F$padj)),] 
+dds_pv_B_G <- dds_pv_B_G[!(is.na(dds_pv_B_G$padj)),] 
+dds_pv_B_H <- dds_pv_B_H[!(is.na(dds_pv_B_H$padj)),] 
+dds_pv_B_I <- dds_pv_B_I[!(is.na(dds_pv_B_I$padj)),] 
+dds_pv_B_J <- dds_pv_B_J[!(is.na(dds_pv_B_J$padj)),] 
+dds_pv_B_K <- dds_pv_B_K[!(is.na(dds_pv_B_K$padj)),] 
+dds_pv_C_D <- dds_pv_C_D[!(is.na(dds_pv_C_D$padj)),] 
+dds_pv_C_E <- dds_pv_C_E[!(is.na(dds_pv_C_E$padj)),] 
+dds_pv_C_F <- dds_pv_C_F[!(is.na(dds_pv_C_F$padj)),] 
+dds_pv_C_G <- dds_pv_C_G[!(is.na(dds_pv_C_G$padj)),] 
+dds_pv_C_H <- dds_pv_C_H[!(is.na(dds_pv_C_H$padj)),] 
+dds_pv_C_I <- dds_pv_C_I[!(is.na(dds_pv_C_I$padj)),] 
+dds_pv_C_J <- dds_pv_C_J[!(is.na(dds_pv_C_J$padj)),] 
+dds_pv_C_K <- dds_pv_C_K[!(is.na(dds_pv_C_K$padj)),] 
+dds_pv_D_E <- dds_pv_D_E[!(is.na(dds_pv_D_E$padj)),] 
+dds_pv_D_F <- dds_pv_D_F[!(is.na(dds_pv_D_F$padj)),] 
+dds_pv_D_G <- dds_pv_D_G[!(is.na(dds_pv_D_G$padj)),] 
+dds_pv_D_H <- dds_pv_D_H[!(is.na(dds_pv_D_H$padj)),] 
+dds_pv_D_I <- dds_pv_D_I[!(is.na(dds_pv_D_I$padj)),] 
+dds_pv_D_J <- dds_pv_D_J[!(is.na(dds_pv_D_J$padj)),] 
+dds_pv_D_K <- dds_pv_D_K[!(is.na(dds_pv_D_K$padj)),] 
+dds_pv_E_F <- dds_pv_E_F[!(is.na(dds_pv_E_F$padj)),] 
+dds_pv_E_G <- dds_pv_E_G[!(is.na(dds_pv_E_G$padj)),] 
+dds_pv_E_H <- dds_pv_E_H[!(is.na(dds_pv_E_H$padj)),] 
+dds_pv_E_I <- dds_pv_E_I[!(is.na(dds_pv_E_I$padj)),] 
+dds_pv_E_J <- dds_pv_E_J[!(is.na(dds_pv_E_J$padj)),] 
+dds_pv_E_K <- dds_pv_E_K[!(is.na(dds_pv_E_K$padj)),] 
+dds_pv_F_G <- dds_pv_F_G[!(is.na(dds_pv_F_G$padj)),] 
+dds_pv_F_H <- dds_pv_F_H[!(is.na(dds_pv_F_H$padj)),] 
+dds_pv_F_I <- dds_pv_F_I[!(is.na(dds_pv_F_I$padj)),] 
+dds_pv_F_J <- dds_pv_F_J[!(is.na(dds_pv_F_J$padj)),] 
+dds_pv_F_K <- dds_pv_F_K[!(is.na(dds_pv_F_K$padj)),] 
+dds_pv_G_H <- dds_pv_G_H[!(is.na(dds_pv_G_H$padj)),] 
+dds_pv_G_I <- dds_pv_G_I[!(is.na(dds_pv_G_I$padj)),] 
+dds_pv_G_J <- dds_pv_G_J[!(is.na(dds_pv_G_J$padj)),] 
+dds_pv_G_K <- dds_pv_G_K[!(is.na(dds_pv_G_K$padj)),] 
+dds_pv_H_I <- dds_pv_H_I[!(is.na(dds_pv_H_I$padj)),] 
+dds_pv_H_J <- dds_pv_H_J[!(is.na(dds_pv_H_J$padj)),] 
+dds_pv_H_K <- dds_pv_H_K[!(is.na(dds_pv_H_K$padj)),] 
+dds_pv_I_J <- dds_pv_I_J[!(is.na(dds_pv_I_J$padj)),] 
+dds_pv_I_K <- dds_pv_I_K[!(is.na(dds_pv_I_K$padj)),] 
+dds_pv_J_K <- dds_pv_J_K[!(is.na(dds_pv_J_K$padj)),] 
+
+deseq2_gene_list_A_B <- as.data.frame(dds_pv_A_B[dds_pv_A_B$padj < 0.05,])
+deseq2_gene_list_A_C <- as.data.frame(dds_pv_A_C[dds_pv_A_C$padj < 0.05,])
+deseq2_gene_list_A_D <- as.data.frame(dds_pv_A_D[dds_pv_A_D$padj < 0.05,])
+deseq2_gene_list_A_E <- as.data.frame(dds_pv_A_E[dds_pv_A_E$padj < 0.05,])
+deseq2_gene_list_A_F <- as.data.frame(dds_pv_A_F[dds_pv_A_F$padj < 0.05,])
+deseq2_gene_list_A_G <- as.data.frame(dds_pv_A_G[dds_pv_A_G$padj < 0.05,])
+deseq2_gene_list_A_H <- as.data.frame(dds_pv_A_H[dds_pv_A_H$padj < 0.05,])
+deseq2_gene_list_A_I <- as.data.frame(dds_pv_A_I[dds_pv_A_I$padj < 0.05,])
+deseq2_gene_list_A_J <- as.data.frame(dds_pv_A_J[dds_pv_A_J$padj < 0.05,])
+deseq2_gene_list_A_K <- as.data.frame(dds_pv_A_K[dds_pv_A_K$padj < 0.05,])
+deseq2_gene_list_B_C <- as.data.frame(dds_pv_B_C[dds_pv_B_C$padj < 0.05,])
+deseq2_gene_list_B_D <- as.data.frame(dds_pv_B_D[dds_pv_B_D$padj < 0.05,])
+deseq2_gene_list_B_E <- as.data.frame(dds_pv_B_E[dds_pv_B_E$padj < 0.05,])
+deseq2_gene_list_B_F <- as.data.frame(dds_pv_B_F[dds_pv_B_F$padj < 0.05,])
+deseq2_gene_list_B_G <- as.data.frame(dds_pv_B_G[dds_pv_B_G$padj < 0.05,])
+deseq2_gene_list_B_H <- as.data.frame(dds_pv_B_H[dds_pv_B_H$padj < 0.05,])
+deseq2_gene_list_B_I <- as.data.frame(dds_pv_B_I[dds_pv_B_I$padj < 0.05,])
+deseq2_gene_list_B_J <- as.data.frame(dds_pv_B_J[dds_pv_B_J$padj < 0.05,])
+deseq2_gene_list_B_K <- as.data.frame(dds_pv_B_K[dds_pv_B_K$padj < 0.05,])
+deseq2_gene_list_C_D <- as.data.frame(dds_pv_C_D[dds_pv_C_D$padj < 0.05,])
+deseq2_gene_list_C_E <- as.data.frame(dds_pv_C_E[dds_pv_C_E$padj < 0.05,])
+deseq2_gene_list_C_F <- as.data.frame(dds_pv_C_F[dds_pv_C_F$padj < 0.05,])
+deseq2_gene_list_C_G <- as.data.frame(dds_pv_C_G[dds_pv_C_G$padj < 0.05,])
+deseq2_gene_list_C_H <- as.data.frame(dds_pv_C_H[dds_pv_C_H$padj < 0.05,])
+deseq2_gene_list_C_I <- as.data.frame(dds_pv_C_I[dds_pv_C_I$padj < 0.05,])
+deseq2_gene_list_C_J <- as.data.frame(dds_pv_C_J[dds_pv_C_J$padj < 0.05,])
+deseq2_gene_list_C_K <- as.data.frame(dds_pv_C_K[dds_pv_C_K$padj < 0.05,])
+deseq2_gene_list_D_E <- as.data.frame(dds_pv_D_E[dds_pv_D_E$padj < 0.05,])
+deseq2_gene_list_D_F <- as.data.frame(dds_pv_D_F[dds_pv_D_F$padj < 0.05,])
+deseq2_gene_list_D_G <- as.data.frame(dds_pv_D_G[dds_pv_D_G$padj < 0.05,])
+deseq2_gene_list_D_H <- as.data.frame(dds_pv_D_H[dds_pv_D_H$padj < 0.05,])
+deseq2_gene_list_D_I <- as.data.frame(dds_pv_D_I[dds_pv_D_I$padj < 0.05,])
+deseq2_gene_list_D_J <- as.data.frame(dds_pv_D_J[dds_pv_D_J$padj < 0.05,])
+deseq2_gene_list_D_K <- as.data.frame(dds_pv_D_K[dds_pv_D_K$padj < 0.05,])
+deseq2_gene_list_E_F <- as.data.frame(dds_pv_E_F[dds_pv_E_F$padj < 0.05,])
+deseq2_gene_list_E_G <- as.data.frame(dds_pv_E_G[dds_pv_E_G$padj < 0.05,])
+deseq2_gene_list_E_H <- as.data.frame(dds_pv_E_H[dds_pv_E_H$padj < 0.05,])
+deseq2_gene_list_E_I <- as.data.frame(dds_pv_E_I[dds_pv_E_I$padj < 0.05,])
+deseq2_gene_list_E_J <- as.data.frame(dds_pv_E_J[dds_pv_E_J$padj < 0.05,])
+deseq2_gene_list_E_K <- as.data.frame(dds_pv_E_K[dds_pv_E_K$padj < 0.05,])
+deseq2_gene_list_F_G <- as.data.frame(dds_pv_F_G[dds_pv_F_G$padj < 0.05,])
+deseq2_gene_list_F_H <- as.data.frame(dds_pv_F_H[dds_pv_F_H$padj < 0.05,])
+deseq2_gene_list_F_I <- as.data.frame(dds_pv_F_I[dds_pv_F_I$padj < 0.05,])
+deseq2_gene_list_F_J <- as.data.frame(dds_pv_F_J[dds_pv_F_J$padj < 0.05,])
+deseq2_gene_list_F_K <- as.data.frame(dds_pv_F_K[dds_pv_F_K$padj < 0.05,])
+deseq2_gene_list_G_H <- as.data.frame(dds_pv_G_H[dds_pv_G_H$padj < 0.05,])
+deseq2_gene_list_G_I <- as.data.frame(dds_pv_G_I[dds_pv_G_I$padj < 0.05,])
+deseq2_gene_list_G_J <- as.data.frame(dds_pv_G_J[dds_pv_G_J$padj < 0.05,])
+deseq2_gene_list_G_K <- as.data.frame(dds_pv_G_K[dds_pv_G_K$padj < 0.05,])
+deseq2_gene_list_H_I <- as.data.frame(dds_pv_H_I[dds_pv_H_I$padj < 0.05,])
+deseq2_gene_list_H_J <- as.data.frame(dds_pv_H_J[dds_pv_H_J$padj < 0.05,])
+deseq2_gene_list_H_K <- as.data.frame(dds_pv_H_K[dds_pv_H_K$padj < 0.05,])
+deseq2_gene_list_I_J <- as.data.frame(dds_pv_I_J[dds_pv_I_J$padj < 0.05,])
+deseq2_gene_list_I_K <- as.data.frame(dds_pv_I_K[dds_pv_I_K$padj < 0.05,])
+deseq2_gene_list_J_K <- as.data.frame(dds_pv_J_K[dds_pv_J_K$padj < 0.05,])
+
+# export data
+write.table(deseq2_gene_list_A_B, "deseq2_gene_list_0.05_padj_A_B.txt", sep="\t")
+write.table(deseq2_gene_list_A_C, "deseq2_gene_list_0.05_padj_A_C.txt", sep="\t")
+write.table(deseq2_gene_list_A_D, "deseq2_gene_list_0.05_padj_A_D.txt", sep="\t")
+write.table(deseq2_gene_list_A_E, "deseq2_gene_list_0.05_padj_A_E.txt", sep="\t")
+write.table(deseq2_gene_list_A_F, "deseq2_gene_list_0.05_padj_A_F.txt", sep="\t")
+write.table(deseq2_gene_list_A_G, "deseq2_gene_list_0.05_padj_A_G.txt", sep="\t")
+write.table(deseq2_gene_list_A_H, "deseq2_gene_list_0.05_padj_A_H.txt", sep="\t")
+write.table(deseq2_gene_list_A_I, "deseq2_gene_list_0.05_padj_A_I.txt", sep="\t")
+write.table(deseq2_gene_list_A_J, "deseq2_gene_list_0.05_padj_A_J.txt", sep="\t")
+write.table(deseq2_gene_list_A_K, "deseq2_gene_list_0.05_padj_A_K.txt", sep="\t")
+write.table(deseq2_gene_list_B_C, "deseq2_gene_list_0.05_padj_B_C.txt", sep="\t")
+write.table(deseq2_gene_list_B_D, "deseq2_gene_list_0.05_padj_B_D.txt", sep="\t")
+write.table(deseq2_gene_list_B_E, "deseq2_gene_list_0.05_padj_B_E.txt", sep="\t")
+write.table(deseq2_gene_list_B_F, "deseq2_gene_list_0.05_padj_B_F.txt", sep="\t")
+write.table(deseq2_gene_list_B_G, "deseq2_gene_list_0.05_padj_B_G.txt", sep="\t")
+write.table(deseq2_gene_list_B_H, "deseq2_gene_list_0.05_padj_B_H.txt", sep="\t")
+write.table(deseq2_gene_list_B_I, "deseq2_gene_list_0.05_padj_B_I.txt", sep="\t")
+write.table(deseq2_gene_list_B_J, "deseq2_gene_list_0.05_padj_B_J.txt", sep="\t")
+write.table(deseq2_gene_list_B_K, "deseq2_gene_list_0.05_padj_B_K.txt", sep="\t")
+write.table(deseq2_gene_list_C_D, "deseq2_gene_list_0.05_padj_C_D.txt", sep="\t")
+write.table(deseq2_gene_list_C_E, "deseq2_gene_list_0.05_padj_C_E.txt", sep="\t")
+write.table(deseq2_gene_list_C_F, "deseq2_gene_list_0.05_padj_C_F.txt", sep="\t")
+write.table(deseq2_gene_list_C_G, "deseq2_gene_list_0.05_padj_C_G.txt", sep="\t")
+write.table(deseq2_gene_list_C_H, "deseq2_gene_list_0.05_padj_C_H.txt", sep="\t")
+write.table(deseq2_gene_list_C_I, "deseq2_gene_list_0.05_padj_C_I.txt", sep="\t")
+write.table(deseq2_gene_list_C_J, "deseq2_gene_list_0.05_padj_C_J.txt", sep="\t")
+write.table(deseq2_gene_list_C_K, "deseq2_gene_list_0.05_padj_C_K.txt", sep="\t")
+write.table(deseq2_gene_list_D_E, "deseq2_gene_list_0.05_padj_D_E.txt", sep="\t")
+write.table(deseq2_gene_list_D_F, "deseq2_gene_list_0.05_padj_D_F.txt", sep="\t")
+write.table(deseq2_gene_list_D_G, "deseq2_gene_list_0.05_padj_D_G.txt", sep="\t")
+write.table(deseq2_gene_list_D_H, "deseq2_gene_list_0.05_padj_D_H.txt", sep="\t")
+write.table(deseq2_gene_list_D_I, "deseq2_gene_list_0.05_padj_D_I.txt", sep="\t")
+write.table(deseq2_gene_list_D_J, "deseq2_gene_list_0.05_padj_D_J.txt", sep="\t")
+write.table(deseq2_gene_list_D_K, "deseq2_gene_list_0.05_padj_D_K.txt", sep="\t")
+write.table(deseq2_gene_list_E_F, "deseq2_gene_list_0.05_padj_E_F.txt", sep="\t")
+write.table(deseq2_gene_list_E_G, "deseq2_gene_list_0.05_padj_E_G.txt", sep="\t")
+write.table(deseq2_gene_list_E_H, "deseq2_gene_list_0.05_padj_E_H.txt", sep="\t")
+write.table(deseq2_gene_list_E_I, "deseq2_gene_list_0.05_padj_E_I.txt", sep="\t")
+write.table(deseq2_gene_list_E_J, "deseq2_gene_list_0.05_padj_E_J.txt", sep="\t")
+write.table(deseq2_gene_list_E_K, "deseq2_gene_list_0.05_padj_E_K.txt", sep="\t")
+write.table(deseq2_gene_list_F_G, "deseq2_gene_list_0.05_padj_F_G.txt", sep="\t")
+write.table(deseq2_gene_list_F_H, "deseq2_gene_list_0.05_padj_F_H.txt", sep="\t")
+write.table(deseq2_gene_list_F_I, "deseq2_gene_list_0.05_padj_F_I.txt", sep="\t")
+write.table(deseq2_gene_list_F_J, "deseq2_gene_list_0.05_padj_F_J.txt", sep="\t")
+write.table(deseq2_gene_list_F_K, "deseq2_gene_list_0.05_padj_F_K.txt", sep="\t")
+write.table(deseq2_gene_list_G_H, "deseq2_gene_list_0.05_padj_G_H.txt", sep="\t")
+write.table(deseq2_gene_list_G_I, "deseq2_gene_list_0.05_padj_G_I.txt", sep="\t")
+write.table(deseq2_gene_list_G_J, "deseq2_gene_list_0.05_padj_G_J.txt", sep="\t")
+write.table(deseq2_gene_list_G_K, "deseq2_gene_list_0.05_padj_G_K.txt", sep="\t")
+write.table(deseq2_gene_list_H_I, "deseq2_gene_list_0.05_padj_H_I.txt", sep="\t")
+write.table(deseq2_gene_list_H_J, "deseq2_gene_list_0.05_padj_H_J.txt", sep="\t")
+write.table(deseq2_gene_list_H_K, "deseq2_gene_list_0.05_padj_H_K.txt", sep="\t")
+write.table(deseq2_gene_list_I_J, "deseq2_gene_list_0.05_padj_I_J.txt", sep="\t")
+write.table(deseq2_gene_list_I_K, "deseq2_gene_list_0.05_padj_I_K.txt", sep="\t")
+write.table(deseq2_gene_list_J_K, "deseq2_gene_list_0.05_padj_J_K.txt", sep="\t")
+```
