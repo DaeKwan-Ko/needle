@@ -1,1 +1,110 @@
+#------------------------------------------------------------------------------------
+Differential gene expression analysis of Maize Dataset using DESeq2
+Data Source:
+SRA: PRJNA436356
+GEO: GSE111250
+Input data: 
+Paper Reference: DOI: 10.1105/tpc.18.00153
+Author: Dae Kwan Ko (dkko@msu.edu)
+Last Modified: 2024-08-30
+Overview: This repository provides a detailed RNA-seq data processing pipeline for the maize dataset. The pipeline includes steps for merging sequencing files, quality control, adapter trimming, alignment, and quantification, leveraging a suite of bioinformatics tools.
+#------------------------------------------------------------------------------------
 
+# each time point data was processed separately for this dataset
+
+rm(list=ls())
+setwd("/Users/dkko/xxxx/")
+
+myFiles <- list.files(pattern = glob2rx("*htseq.txt"), 
+                      all.files = T, 
+                      full.names = F)
+myFiles
+myData <- lapply(myFiles,
+                 read.table, colClasses=c("character", "numeric"))
+myData
+names(myData) <-c("ctrl_rep1",
+                  "ctrl_rep2",
+                  "ctrl_rep3",
+                  "treat_rep1",
+                  "treat_rep2",
+                  "treat_rep3")
+
+summary(myData)
+head(myData$ctrl_rep1)
+tail(myData$ctrl_rep1)
+rmLines <- function(x){x <- x[1:39272,]}
+myData <- lapply(myData, rmLines)
+nrow(myData$ctrl_rep1)
+counts <- data.frame(row.names=myData$ctrl_rep1[,1],
+                     ctrl_rep1=myData$ctrl_rep1[,2],
+                     ctrl_rep2=myData$ctrl_rep2[,2],
+                     ctrl_rep3=myData$ctrl_rep3[,2],
+                     treat_rep1=myData$treat_rep1[,2],
+                     treat_rep2=myData$treat_rep2[,2],
+                     treat_rep3=myData$treat_rep3[,2])
+head(counts)                  
+geneTotals <- rowSums(counts)
+
+countsNonZero <- counts[geneTotals>100,] 
+nrow(countsNonZero)
+treatment <- as.factor(c(rep("ctrl",3), rep("treat",3)))
+design <- model.matrix(~treatment)
+
+library("limma")
+library("edgeR")
+dge <- DGEList(counts=countsNonZero, 
+               group=treatment, 
+               remove.zeros=T) 
+plotMDS(dge,main="3h MDS", 
+        pch = 19,
+        col=c(rep("black",3), 
+              rep("red",3)))
+
+library("DESeq2")
+colData <- DataFrame(treatment)
+colData
+treatment
+dds <- DESeqDataSetFromMatrix(countsNonZero, colData=colData, design=formula(~treatment))
+dds
+dds <- DESeq(dds)
+slotNames(dds)
+dds@colData
+str(dds)
+geneDispersion <- dds@rowRanges@elementMetadata@listData$dispGeneEst
+treatmentTM <- dds@rowRanges@elementMetadata@listData$treatment_treat_vs_ctrl
+plot(treatmentTM,geneDispersion, xlab="Fold change of expression (treat/ctrl)", 
+     ylab="Gene dispersion estimate", pch=19, cex=0.4)
+plotDispEsts(dds)
+
+#MA-plot
+res <- results(dds) 
+res <- lfcShrink(dds, coef=2, res=res)
+plotMA(res, ylim=c(-3.5,3.5), alpha = 0.05) #with shrinking
+plotMA(dds, ylim=c(-10,10), alpha = 0.05) #without shrinking
+
+library("RColorBrewer")
+library("gplots")
+rdds <- rlog(dds)
+plotPCA(rdds, intgroup=c("treatment"))
+plotPCA(rdds, intgroup=c("treatment"),returnData=TRUE)
+hmol <- colorRampPalette(brewer.pal(9,"Reds"))(100)
+distsRL <- dist(t(assay(rdds)))
+mat <- as.matrix(distsRL)
+rownames(mat) <- colnames(mat) <- with (colData(dds),treatment)
+heatmap.2(mat,
+          trace="none",
+          col=rev(hmol),
+          dendrogram = "col",
+          density.info = "none",
+          margins = c(10,10))
+dds_pv <- results(dds)
+dds_pv <- dds_pv[!(is.na(dds_pv$padj)),]
+
+deseq2_gene_list <- as.data.frame(dds_pv[dds_pv$padj < 0.01,])     
+write.table(deseq2_gene_list, "deseq2_gene_list_48h_greater100.txt", sep="\t")
+
+
+#to generate a list of all genes
+dds_pv <- results(dds)
+deseq2_gene_list <- as.data.frame(dds_pv)
+write.table(deseq2_gene_list, "deseq2_gene_list_Col-24h.ALL.txt", sep="\t")
