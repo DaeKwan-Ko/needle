@@ -1,5 +1,5 @@
 #------------------------------------------------------------------------------------
-Differential gene expression analysis of the maize dataset using DESeq2
+Differential gene expression analysis of the soybean dataset using DESeq2
 Data Source:
 GEO: GSE57606
 GEO: GSE46096
