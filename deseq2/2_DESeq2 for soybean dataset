@@ -1,10 +1,12 @@
 #------------------------------------------------------------------------------------
 Differential gene expression analysis of soybean dataset using DESeq2
 Data Source:
-SRA: PRJNA436356
-GEO: GSE111250
-Input data: read count files generated using htseq-count 
-Paper Reference: DOI: 10.1105/tpc.18.00153
+GEO: GSE57606
+GEO: GSE46096
+GEO: GSE99109
+Data format: single-end 50 nt
+Paper Reference: DOI: 10.1073/pnas.1918441117
+Input data: raw read count files generated using htseq-count
 Author: Dae Kwan Ko (dkko@msu.edu)
 Last Modified: 2024-09-19
 Overview: This repository provides a detailed RNA-seq data processing pipeline for the maize dataset. The pipeline includes steps for merging sequencing files, quality control, adapter trimming, alignment, and quantification, leveraging a suite of bioinformatics tools.
