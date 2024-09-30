@@ -6,7 +6,7 @@ GEO: GSE46096
 GEO: GSE99109
 Data format: single-end 50 nt
 Paper Reference: DOI: 10.1073/pnas.1918441117
-Input data: raw read count files generated using htseq-count
+Input data: gene expression profiles (log2(FPKM+1))
 Author: Dae Kwan Ko (dkko@msu.edu)
 Last Modified: 2024-09-19
 Overview: This repository presents the scripts used for constructing the gene regulatory network using GENIE3.
