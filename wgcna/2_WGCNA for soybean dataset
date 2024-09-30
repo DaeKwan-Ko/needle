@@ -1,13 +1,200 @@
 #------------------------------------------------------------------------------------
-Gene regulatory network construction of blue module in the maize dataset using GENIE3
+Coexpression network construction in the soybean dataset using WGCNA
 Data Source:
 GEO: GSE57606
 GEO: GSE46096
 GEO: GSE99109
 Data format: single-end 50 nt
 Paper Reference: DOI: 10.1073/pnas.1918441117
-Input data: raw read count files generated using htseq-count
+Input data: gene expression profiles (log2(FPKM+1))
 Author: Dae Kwan Ko (dkko@msu.edu)
 Last Modified: 2024-09-19
-Overview: This repository presents the scripts used for constructing the gene regulatory network using GENIE3.
+Overview: This repository presents the scripts used for the coexpression network analysis using WGCNA.
 #------------------------------------------------------------------------------------
+
+```{r setup, include=FALSE, echo=FALSE}
+require("knitr")
+opts_knit$set(root.dir = "/Users/dkko/xxxx/")
+rm(list=ls()) # Remove everything from the R environment. Important if you have some variables saved already
+```
+
+
+```{r loadLibs}
+require(WGCNA)
+require(flashClust)
+require(RColorBrewer)
+require(RColorBrewer)
+require(gplots)
+require(ggplot2)
+require(pheatmap)
+```
+
+```{r input.file.prep}
+options(stringsAsFactors = FALSE)
+df <- read.table("WGCNA input_FPKM.Log2FC_DEGs.txt", header=TRUE, sep ="\t")
+dim(df)
+names(df)
+rnames <- df[,1]
+rnames
+rownames(df) <- rnames
+DEGs <- df
+names(DEGs)
+datExpr = as.data.frame(t(DEGs[, -c(1)]))
+View(datExpr)
+dim(datExpr)
+```
+
+
+```{r input.file.prep}
+gsg = goodSamplesGenes(datExpr, verbose = 3);
+gsg$allOK
+if (!gsg$allOK)
+{
+  # Optionally, print the gene and sample names that were removed:
+  if (sum(!gsg$goodGenes)>0)
+     printFlush(paste("Removing genes:", paste(names(datExpr)[!gsg$goodGenes], collapse = ", ")));
+  if (sum(!gsg$goodSamples)>0)
+     printFlush(paste("Removing samples:", paste(rownames(datExpr)[!gsg$goodSamples], collapse = ", ")));
+  # Remove the offending genes and samples from the data:
+  datExpr = datExpr[gsg$goodSamples, gsg$goodGenes]
+}
+```
+
+
+```{r WGCNA_Power}
+powers = c(c(1:10), seq(from = 12, to=40, by=2))
+sft=pickSoftThreshold(datExpr, powerVector=powers, networkType="signed", verbose = 5)
+sizeGrWindow(9, 5)
+par(mfrow = c(1,2))
+cex1 = 0.9
+
+plot(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],xlab="Soft Threshold (power)",ylab="Scale Free Topology Model Fit, signed R^2",type="n", main = paste("Scale independence"))
+text(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],labels=powers,cex=cex1,col="red")
+abline(h=0.90,col="red")
+
+plot(sft$fitIndices[,1], sft$fitIndices[,5],xlab="Soft Threshold (power)",ylab="Mean Connectivity", type="n",main = paste("Mean connectivity"))
+text(sft$fitIndices[,1], sft$fitIndices[,5], labels=powers, cex=cex1,col="red")
+```
+
+
+```{r WGCNA_Power}
+
+softPower = 18
+adjacency= adjacency(datExpr,type = "signed", power = softPower)
+TOM = TOMsimilarity(adjacency);
+dissTOM = 1-TOM
+
+geneTree = flashClust(as.dist(dissTOM),method="average")
+
+sizeGrWindow(12,9)
+plot(geneTree, xlab="", sub="", main = "Gene clustering on TOM-based dissimilarity",
+    labels = FALSE, hang = 0.04);
+
+minModuleSize = 30;
+
+dynamicMods = cutreeDynamic(dendro = geneTree, distM = dissTOM,
+              deepSplit = 2, pamRespectsDendro = FALSE,
+              minClusterSize = minModuleSize);
+table(dynamicMods) # Label 0 is reserved for unassigned genes.
+```
+
+
+```{r plot}
+dynamicColors = labels2colors(dynamicMods)
+table(dynamicColors)
+sizeGrWindow(8,6)
+plotDendroAndColors(geneTree, dynamicColors, "Dynamic Tree Cut", dendroLabels = FALSE, hang = 0.03, addGuide = TRUE, guideHang = 0.05, main = "Gene dendrogram and module colors")
+```
+
+```{r merging}
+MEList = moduleEigengenes(datExpr, colors = dynamicColors)
+MEs = MEList$eigengenes
+
+MEDiss = 1-cor(MEs);
+
+METree = hclust(as.dist(MEDiss), method = "average");
+
+sizeGrWindow(7, 6)
+plot(METree, main = "Clustering of module eigengenes",
+     xlab = "", sub = "")
+
+MEDissThres = 0.25
+
+abline(h=MEDissThres, col = "red")
+merge = mergeCloseModules(datExpr, dynamicColors, cutHeight = MEDissThres, verbose = 3)
+mergedColors = merge$colors;
+mergedMEs = merge$newMEs;
+
+sizeGrWindow(12, 9)
+plotDendroAndColors(geneTree, cbind(dynamicColors, mergedColors),
+                   c("Dynamic Tree Cut", "Merged dynamic"),
+                   dendroLabels = FALSE, hang = 0.03,
+                   addGuide = TRUE, guideHang = 0.05)
+
+pdf(file = "8678 DEGs_root_dendrogram.pdf", width = 7, height = 6) # defaults to 7 x 7 inches
+plotDendroAndColors(geneTree, cbind(dynamicColors, mergedColors),
+                   c("Dynamic Tree Cut", "Merged dynamic"),
+                   dendroLabels = FALSE, hang = 0.03,
+                   addGuide = TRUE, guideHang = 0.05)
+dev.off()
+moduleColors = mergedColors
+```
+
+
+```{r visuzalizing}
+dissTOM = 1-TOMsimilarityFromExpr(datExpr, power = 18);
+plotTOM = dissTOM^7;
+diag(plotTOM) = NA;
+```
+
+```{r visuzalizing}
+MEs = moduleEigengenes(datExpr, moduleColors)$eigengenes
+plotEigengeneNetworks(MEs, "", marDendro = c(0,4,1,2), marHeatmap = c(3,4,1,2))
+pdf(file = "3967 DEGs_plotEigengeneNetworks.pdf", width = 7, height = 6) # defaults to 7 x 7 inches
+plotEigengeneNetworks(MEs, "", marDendro = c(0,4,1,2), marHeatmap = c(3,4,1,2))
+dev.off()
+
+sizeGrWindow(6,6);
+par(cex = 1.0)
+plotEigengeneNetworks(MEs, "Eigengene dendrogram", marDendro = c(0,4,2,0),
+                    plotHeatmaps = FALSE)
+par(cex = 1.0)
+plotEigengeneNetworks(MEs, "Eigengene adjacency heatmap", marHeatmap = c(3,4,2,2),
+                    plotDendrograms = FALSE, xLabelsAngle = 90)
+table(mergedColors)
+
+write.table(MEs, file = "3967 DEGs_WGCNA_eigengenes.txt", sep = "\t")
+```
+
+
+```{r exporting.list}
+MEs = moduleEigengenes(datExpr, moduleColors)$eigengenes
+
+
+for (color in moduleColors){
+module=datExpr[which(moduleColors==color)]
+write.table(module, paste("3967 DEGs_module_",color, ".txt",sep=""), sep="\t", row.names=TRUE, col.names=TRUE,quote=FALSE)
+}
+```
+
+
+```{r exporting.to.cytoscape}
+table(moduleColors)
+# Select modules
+modules = c("yellow3");
+probes = names(datExpr)
+inModule = is.finite(match(moduleColors, modules));
+modProbes = probes[inModule];
+
+# Select the corresponding Topological Overlap
+modTOM = TOM[inModule, inModule];
+dimnames(modTOM) = list(modProbes, modProbes)
+
+cyt = exportNetworkToCytoscape(modTOM,
+                               edgeFile = paste("8678 DEGs_root_CytoscapeInput-edges-0.4-", paste(modules, collapse="-"), ".txt", sep=""),
+                               nodeFile = paste("8678 DEGs_root_CytoscapeInput-nodes-0.4-", paste(modules, collapse="-"), ".txt", sep=""),
+                               weighted = TRUE,
+                               threshold = 0.4,
+                               nodeNames = modProbes,
+                               nodeAttr = moduleColors[inModule]);
+```
