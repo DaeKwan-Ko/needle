@@ -163,7 +163,7 @@ plotEigengeneNetworks(MEs, "Eigengene adjacency heatmap", marHeatmap = c(3,4,2,2
                     plotDendrograms = FALSE, xLabelsAngle = 90)
 table(mergedColors)
 
-write.table(MEs, file = "3967 DEGs_WGCNA_eigengenes.txt", sep = "\t")
+write.table(MEs, file = "23583 DEGs_WGCNA_eigengenes.txt", sep = "\t")
 ```
 
 
@@ -173,7 +173,7 @@ MEs = moduleEigengenes(datExpr, moduleColors)$eigengenes
 
 for (color in moduleColors){
 module=datExpr[which(moduleColors==color)]
-write.table(module, paste("3967 DEGs_module_",color, ".txt",sep=""), sep="\t", row.names=TRUE, col.names=TRUE,quote=FALSE)
+write.table(module, paste("23583 DEGs_module_",color, ".txt",sep=""), sep="\t", row.names=TRUE, col.names=TRUE,quote=FALSE)
 }
 ```
 
@@ -181,7 +181,7 @@ write.table(module, paste("3967 DEGs_module_",color, ".txt",sep=""), sep="\t", r
 ```{r exporting.to.cytoscape}
 table(moduleColors)
 # Select modules
-modules = c("yellow3");
+modules = c("turquoise");
 probes = names(datExpr)
 inModule = is.finite(match(moduleColors, modules));
 modProbes = probes[inModule];
@@ -191,10 +191,10 @@ modTOM = TOM[inModule, inModule];
 dimnames(modTOM) = list(modProbes, modProbes)
 
 cyt = exportNetworkToCytoscape(modTOM,
-                               edgeFile = paste("8678 DEGs_root_CytoscapeInput-edges-0.4-", paste(modules, collapse="-"), ".txt", sep=""),
-                               nodeFile = paste("8678 DEGs_root_CytoscapeInput-nodes-0.4-", paste(modules, collapse="-"), ".txt", sep=""),
+                               edgeFile = paste("23583 DEGs_CytoscapeInput-edges-0.2-", paste(modules, collapse="-"), ".txt", sep=""),
+                               nodeFile = paste("23583 DEGs_CytoscapeInput-nodes-0.2-", paste(modules, collapse="-"), ".txt", sep=""),
                                weighted = TRUE,
-                               threshold = 0.4,
+                               threshold = 0.2,
                                nodeNames = modProbes,
                                nodeAttr = moduleColors[inModule]);
 ```
