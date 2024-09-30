@@ -28,6 +28,7 @@ wgcna/
 Contains scripts for coexpression network analysis using WGCNA. For detailed information, please refer to our previous book chapter (https://link.springer.com/protocol/10.1007/978-1-0716-2784-6_27) and the WGCNA GitHub page (https://github.com/DaeKwan-Ko/WGCNA), which provides full details about the scripts.
 
 genie3/
+
 Contains scripts for gene regulatory network analysis using GENIE3.
 
 Feel free to reach out if you have any questions regarding using these scripts.
