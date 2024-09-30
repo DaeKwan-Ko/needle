@@ -1,4 +1,4 @@
-# needle
+# NEEDLE
 Scripts for Gene Discovery and Validation in Non-Model Plant Species
 
 This repository contains scripts used in the paper by Ko and Brandizzi (currently under review).
