@@ -11,7 +11,7 @@ SRA of the sorghum data: PRJNA436356
 GEO of the sorghum data: GSE111250
 Paper Reference: DOI: 10.1105/tpc.18.00153
 
-Input data: read count files generated using htseq-count 
+Input data: gene expression profiles (log2(FPKM+1))
 Author: Dae Kwan Ko (dkko@msu.edu)
 Last modified: 2024-08-30
 Overview: This repository presents the scripts used for constructing the gene regulatory network using GENIE3.
