@@ -1,9 +1,10 @@
 # NEEDLE
 Scripts for Gene Discovery and Validation in Non-Model Plant Species
 
-This repository contains scripts used in the paper by Ko and Brandizzi (10.1016/j.crmeth.2024.100963).
-
-Title: A network-enabled pipeline for gene discovery and validation in non-model plant species
+This repository contains scripts used in the following paper (https://www.cell.com/cell-reports-methods/fulltext/S2667-2375(24)00353-9):
+A network-enabled pipeline for gene discovery and validation in non-model plant species. 
+Ko DK, Brandizzi F
+Cell Rep Methods. 2025 Jan 27;5(1):100963.
 
 Overview
 
