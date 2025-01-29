@@ -6,7 +6,7 @@ A network-enabled pipeline for gene discovery and validation in non-model plant 
 Ko DK, Brandizzi F. 
 Cell Rep Methods. 2025 Jan 27;5(1):100963.
 
-Overview
+## Overview
 
 The provided scripts allow for the analysis of raw data, including RNA-seq analyses, coexpression network analyses, and gene regulatory network analyses.
 
