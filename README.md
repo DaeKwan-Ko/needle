@@ -1,9 +1,9 @@
 # NEEDLE
 Scripts for Gene Discovery and Validation in Non-Model Plant Species
 
-This repository contains scripts used in the paper by Ko and Brandizzi (currently under review).
+This repository contains scripts used in the paper by Ko and Brandizzi (10.1016/j.crmeth.2024.100963).
 
-Title: Advanced Pipeline for Gene Discovery and Validation in Non-Model Plant Species Using Network-Enabled Approaches
+Title: A network-enabled pipeline for gene discovery and validation in non-model plant species
 
 Overview
 
