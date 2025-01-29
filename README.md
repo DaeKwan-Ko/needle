@@ -10,7 +10,7 @@ Cell Rep Methods. 2025 Jan 27;5(1):100963.
 
 The provided scripts allow for the analysis of raw data, including RNA-seq analyses, coexpression network analyses, and gene regulatory network analyses.
 
-Repository Structure and Software Information
+## Repository Structure and Software Information
 
 rna_seq/
 
