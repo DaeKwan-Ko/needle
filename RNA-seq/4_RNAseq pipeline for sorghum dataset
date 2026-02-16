@@ -45,11 +45,11 @@ Step 8: quality control on cleaned files (FastQC)
 fastqc -o ${OUTPUT} -f fastq ${INPUT}
 
 Step 9: genome indexing (Bowtie2)
-# Build a Bowtie2 index for the maize genome
+# Build a Bowtie2 index for the sorghum genome
 bowtie2-build -f Sbicolor_454_v3.0.1.fa Sbicolor_454_v3.0.1
 
 Step 10: Alignment to the genome (Tophat2 via Bowtie2)
-# Map the sequencing reads to the maize genome
+# Map the sequencing reads to the sorghum genome
 tophat2 -o ${OUTPUT} -I 30000 -i 10 -p 5 \
 -G /mnt/home/dkko/genomes/sorghum_v3.1.1/Sbicolor_454_v3.1.1.gene.gff3 \
 --library-type fr-firststrand \
